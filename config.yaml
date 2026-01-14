@@ -1,0 +1,15 @@
+data:
+  root: "data/dataset"
+  raw: "data/raw"
+  processed: "data/processed"
+  img_size: 224
+
+model:
+  name: "resnet50"
+  checkpoint_dir: "models/checkpoints"
+  
+training:
+  epochs: 20
+  batch_size: 32
+  learning_rate: 0.001
+  seed: 42

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACC | Anime Character Classifier</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --card-color: #1a1a1a;
+            --accent-color: #6366f1;
+            --text-color: #ffffff;
+            --secondary-text: #a1a1aa;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Ambient Background */
+        .ambient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            background: radial-gradient(circle at 50% 50%, #1e1b4b 0%, #0a0a0a 100%);
+            opacity: 0.6;
+        }
+
+        header {
+            margin-top: 3rem;
+            text-align: center;
+            animation: fadeIn Down 0.8s ease-out;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin: 0;
+            background: linear-gradient(135deg, #fff 0%, #818cf8 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        p.subtitle {
+            color: var(--secondary-text);
+            font-size: 1.1rem;
+            margin-top: 0.5rem;
+        }
+
+        .container {
+            margin-top: 3rem;
+            width: 90%;
+            max-width: 600px;
+            perspective: 1000px;
+        }
+
+        .upload-area {
+            background-color: var(--card-color);
+            border: 2px dashed #333;
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover,
+        .upload-area.dragover {
+            border-color: var(--accent-color);
+            background-color: #1edb6811;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .icon {
+            font-size: 3rem;
+            color: var(--secondary-text);
+            margin-bottom: 1rem;
+            transition: color 0.3s;
+        }
+
+        .upload-area:hover .icon {
+            color: var(--accent-color);
+        }
+
+        .preview-container {
+            margin-top: 2rem;
+            display: none;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 300px;
+            object-fit: contain;
+            /* Don't crop, show full image */
+            border-radius: 12px;
+            background: #000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .result-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            display: none;
+            /* Hidden by default */
+            align-items: center;
+            justify-content: space-between;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        .character-info h2 {
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        .confidence-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .confidence-bar-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+
+        .stats {
+            color: var(--secondary-text);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: var(--accent-color);
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ambient"></div>
+
+    <header>
+        <h1>Vision ACC</h1>
+        <p class="subtitle">Advanced Anime Character Classification</p>
+    </header>
+
+    <div class="container">
+        <div class="upload-area" id="dropArea" onclick="document.getElementById('fileElem').click()">
+            <div class="icon">📁</div>
+            <strong style="font-size: 1.2rem;">Drop image here</strong>
+            <p style="color: grey;">or click to browse</p>
+            <input type="file" id="fileElem" accept="image/*">
+        </div>
+
+        <div class="spinner" id="loader"></div>
+
+        <div class="preview-container" id="previewContainer">
+            <img src="" class="preview-image" id="previewImg">
+
+            <div class="result-card" id="resultCard">
+                <div style="width: 100%;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <h2 id="charName">Character</h2>
+                        <span id="confText" style="color: var(--accent-color); font-weight: bold;">0%</span>
+                    </div>
+                    <div class="confidence-bar-bg">
+                        <div class="confidence-bar-fill" id="confBar"></div>
+                    </div>
+                    <div class="stats" id="animeSource">Anime: Unknown</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropArea = document.getElementById('dropArea');
+        const fileElem = document.getElementById('fileElem');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImg = document.getElementById('previewImg');
+        const resultCard = document.getElementById('resultCard');
+        const loader = document.getElementById('loader');
+
+        // Drag & Drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false)
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false)
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false)
+        });
+
+        function highlight(e) { dropArea.classList.add('dragover'); }
+        function unhighlight(e) { dropArea.classList.remove('dragover'); }
+
+        dropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        fileElem.addEventListener('change', function () {
+            handleFiles(this.files);
+        });
+
+        function handleFiles(files) {
+            const file = files[0];
+            if (!file) return;
+
+            // Show Preview
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onloadend = function () {
+                previewImg.src = reader.result;
+                previewContainer.style.display = 'block';
+                resultCard.style.display = 'none';
+                uploadFile(file);
+            }
+        }
+
+        async function uploadFile(file) {
+            loader.style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                // Update UI
+                loader.style.display = 'none';
+                resultCard.style.display = 'flex';
+
+                document.getElementById('charName').innerText = result.character;
+                const confPercent = Math.round(result.confidence * 100) + '%';
+                document.getElementById('confText').innerText = confPercent;
+                document.getElementById('confBar').style.width = confPercent;
+                document.getElementById('animeSource').innerText = "Anime Source: " + (result.anime || "N/A");
+
+            } catch (error) {
+                console.error('Error:', error);
+                loader.style.display = 'none';
+                alert('Prediction failed. Is the backend running?');
+            }
+        }
+    </script>
+</body>
+
+</html>
